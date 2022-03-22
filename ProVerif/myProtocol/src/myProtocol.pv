@@ -1,0 +1,161 @@
+
+
+free c: channel.
+
+type pkey.
+type skey.
+type G.
+type exponent.
+type divider.
+
+set attacker = active.
+
+
+(*AID signing*)
+(*fun signAID(id, pkey, nonce): bitstring.
+
+reduc forall id: ID, targetK: pkey
+
+reduc forall myID: id, targetK: pkey, n: nonce; getAID(sign(myID,targetK, n)) = aid.
+reduc forall myID: id, targetK: pkey, n: nonce; checkAID(sign(myID, targetK, n) , sk(pkey)) = aid.
+*)
+
+fun pk(skey): pkey.
+
+			(*Asymmetric key encryption*)
+(*Singing the AIDs*)
+fun encAid(bitstring, bitstring, pkey): bitstring.
+reduc forall id:bitstring, nonce: bitstring, k:skey; getAidId( encAid(id, nonce, pk(k)), k ) = id.
+reduc forall id:bitstring, nonce: bitstring, k:skey; getAidNonce( encAid(id, nonce, pk(k)), k ) = nonce.
+
+(*Main asymmetric encryption*)
+
+
+fun sign(bitstring, skey): bitstring.
+reduc forall x: bitstring, y: skey; checkSign(sign(x, y), pk(y)) = x.
+
+
+fun aenc(bitstring, G, pkey): bitstring.
+reduc forall nonce: bitstring, g: G, y: skey; dencForNonce(aenc(nonce,g, pk(y)), y) = nonce.
+reduc forall nonce: bitstring, g: G, y: skey; dencForG(aenc(nonce,g, pk(y)), y) = g.
+
+			(*-------------------------*)
+
+			(*Symmetric encryption*)
+fun senc(bitstring, G): bitstring.
+reduc forall m: bitstring, K: G; sdec(senc(m, K), K) = m.
+
+			(*--------------------*)
+			(*ADD KDF HASH*)
+			
+
+(*Decisional Diffie-Hellman*)
+const g: G.
+const p: divider.
+fun exp(G, exponent, divider): G.
+equation forall x: exponent, y: exponent; exp(exp(g, x, p), y, p) = exp(exp(g, y, p), x, p).
+
+(*Testing secrets
+free s: bitstring [private].
+query attacker(s).
+*)
+
+
+event i2j_start.
+event j2i_start.
+event i2j_end.
+event j2i_end.
+event match_sk.
+event match_secret.
+
+(*Checks for every messages recieved by the server, one is sent from client*)
+query event(i2j_end) ==> event(i2j_start).
+query inj-event(j2i_end) ==>inj-event(j2i_start).
+
+query inj-event(match_secret)
+	==>(inj-event(i2j_end)
+	==>(inj-event(i2j_start) && inj-event(j2i_start))).
+
+free id1: bitstring.
+
+free skeyI: skey [private].
+free skeyJ: skey [private].
+free sk: G [private].
+free s: bitstring [private].
+
+
+
+query attacker(skeyI).
+query attacker(skeyJ).
+query attacker(sk).
+query attacker(s).
+
+noninterf sk.
+
+weaksecret s.
+weaksecret sk.
+
+(*Protocol process*)
+
+(*Client I*)
+let client1(skI: skey, pkI: pkey, pkJ:pkey)=
+		in(c, pkB:pkey);
+		
+	(*step 1*)
+	new N1: bitstring;
+	let AIDI = encAid(N1,id1,pkB) in
+	if pkB = pkJ then
+	event i2j_start;
+	out(c, (N1,AIDI));
+	
+	(*Step 3*)
+	new expI: exponent;
+	in(c,(Nj:bitstring, mess2:bitstring));
+	let x2 = checkSign(mess2, pkJ) in
+	let nI = dencForNonce(x2, skI) in
+	let gj = dencForG(x2,skI) in
+	let Ki = exp(gj, expI, p) in
+	let gI = exp(g, expI, p) in
+	if nI = N1 && Ki = sk then
+	out(c, (sign(aenc(Nj, gI , pkJ), skI)));
+	
+	(*Step 5 -- symmetric key established*)
+	in(c,m:bitstring);
+	let s2 = sdec(m, Ki) in
+	event j2i_end;
+	if s2 = s then
+	event match_secret.
+	
+
+(*Client J*)
+let client2(skJ: skey, pkJ: pkey, pkI:pkey)=
+		in(c, pkA:pkey);
+		
+	(*Step 2*)
+	new N2: bitstring;
+	new expJ: exponent;
+	in(c, (rN1:bitstring, rAID:bitstring));
+	let Ni = getAidNonce(rAID,skJ) in
+	let gJ = exp(g, expJ, p) in
+	if pkA = pkI && rN1 = Ni then
+	event j2i_start;
+	out(c, (N2, sign(aenc(Ni, gJ , pkI), skJ)));
+	
+	
+	(*Step 4*)
+	in(c, mess3:bitstring);
+	let x3 = checkSign(mess3, pkI) in
+	let nJ = dencForNonce(x3, skJ) in
+	let gi = dencForG(x3,skJ) in
+	let Kj = exp(gi, expJ, p) in
+	event i2j_end;
+	if nJ = N2 && Kj = sk then
+	event match_secret;
+	out(c, senc(s, Kj)).
+	
+process
+	let pkeyI = pk(skeyI) in
+	out(c, (g,p,pkeyI));
+	let pkeyJ = pk(skeyJ) in
+	out(c, (g,p,pkeyJ));
+	(!client1(skeyI, pkeyI, pkeyJ) | !client2(skeyJ, pkeyJ, pkeyI))

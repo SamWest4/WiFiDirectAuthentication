@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<entry key="PATH_PROVERIF">C:\Users\samdw\OneDrive\Documents\Computer_Science\Year_3\Dissertation\anbx-ide-exe-win\ext-tools\proverif.exe</entry>
+<entry key=""></entry>
+<entry key="PATH_FOLDER_OFMC"></entry>
+<entry key="COLORATION_CONSOLE">true</entry>
+<entry key="SEPARATE_CONSOLE">false</entry>
+<entry key="PATH_ANBXC"></entry>
+<entry key="PATH_OFMC"></entry>
+<entry key="PATH_CFG_ANBXC"></entry>
+<entry key="PROVERIF_Last_2"></entry>
+<entry key="PROVERIF_Last_1">-out solve</entry>
+<entry key="PATH_FOLDER_PROVERIF">C:\Users\samdw\OneDrive\Documents\Computer_Science\Year_3\Dissertation\anbx-ide-exe-win\ext-tools</entry>
+<entry key="PROVERIF_Last_0">-in pitype</entry>
+</properties>
